@@ -4,33 +4,49 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { login } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { Package, Eye, EyeOff } from 'lucide-react';
+import { login } from '@/services/auth';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = login(email, password);
+    setIsLoading(true);
     
-    if (user) {
-      toast({
-        title: 'Login successful',
-        description: `Welcome back, ${user.name}!`,
-      });
-      navigate('/dashboard');
-    } else {
+    try {
+      const user = await login(email, password);
+      
+      console.log("user", user);
+
+      if (user && user.id) {
+        toast({
+          title: 'Login successful',
+          description: `Welcome back, ${user.username || user.name || 'User'}!`,
+        });
+        navigate('/dashboard');
+      } else {
+        toast({
+          title: 'Login failed',
+          description: 'Invalid email or password',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error("Login error:", error);
       toast({
         title: 'Login failed',
-        description: 'Invalid email or password',
+        description: 'An error occurred during login',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -57,6 +73,7 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -64,32 +81,27 @@ const Login = () => {
               <div className="relative">
                 <Input
                   id="password"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={isLoading}
                   className="pr-10"
                 />
                 <button
-                  type="button"
+                  type='button'
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className='absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors'
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full">
-              Sign In
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
-          <div className="mt-4 p-3 bg-muted rounded-lg text-sm text-muted-foreground">
-            <p className="font-semibold mb-2">Demo Credentials:</p>
-            <p>Admin: admin@inventory.com</p>
-            <p>User: user@inventory.com</p>
-            <p>Password: password</p>
-          </div>
         </CardContent>
       </Card>
     </div>
