@@ -3,10 +3,20 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { getItems, getCategories, getLocations } from '@/lib/storage';
+import { getItems, getCategories, getLocations, saveItems } from '@/lib/storage';
 import { Item, ItemCategory, Location } from '@/types';
 import { Plus, Search, Filter } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -22,6 +32,17 @@ const Items = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newItem, setNewItem] = useState({
+    name: '',
+    code: '',
+    amount: '',
+    minStock: '',
+    categoryId: '',
+    locationId: '',
+    imageUrl: '',
+  });
+  const { toast } = useToast();
 
   useEffect(() => {
     setItems(getItems());
@@ -40,6 +61,53 @@ const Items = () => {
   const getCategoryName = (id: string) => categories.find(c => c.id === id)?.name || 'Unknown';
   const getLocationName = (id: string) => locations.find(l => l.id === id)?.name || 'Unknown';
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewItem(prev => ({ ...prev, imageUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const item: Item = {
+      id: Date.now().toString(),
+      name: newItem.name,
+      code: newItem.code,
+      amount: parseInt(newItem.amount),
+      minStock: parseInt(newItem.minStock),
+      categoryId: newItem.categoryId,
+      locationId: newItem.locationId,
+      imageUrl: newItem.imageUrl,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedItems = [...items, item];
+    saveItems(updatedItems);
+    setItems(updatedItems);
+    setIsDialogOpen(false);
+    setNewItem({
+      name: '',
+      code: '',
+      amount: '',
+      minStock: '',
+      categoryId: '',
+      locationId: '',
+      imageUrl: '',
+    });
+
+    toast({
+      title: 'Item created',
+      description: 'New item has been added successfully',
+    });
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -48,7 +116,7 @@ const Items = () => {
             <h1 className="text-3xl font-bold">Items</h1>
             <p className="text-muted-foreground">Manage your inventory items</p>
           </div>
-          <Button>
+          <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Item
           </Button>
@@ -123,6 +191,115 @@ const Items = () => {
             </Card>
           ))}
         </div>
+
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Add New Item</DialogTitle>
+              <DialogDescription>
+                Fill in the details to create a new inventory item
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    value={newItem.name}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="code">Code</Label>
+                  <Input
+                    id="code"
+                    value={newItem.code}
+                    onChange={(e) => setNewItem(prev => ({ ...prev, code: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Amount</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      min="0"
+                      value={newItem.amount}
+                      onChange={(e) => setNewItem(prev => ({ ...prev, amount: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="minStock">Min Stock</Label>
+                    <Input
+                      id="minStock"
+                      type="number"
+                      min="0"
+                      value={newItem.minStock}
+                      onChange={(e) => setNewItem(prev => ({ ...prev, minStock: e.target.value }))}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select
+                    value={newItem.categoryId}
+                    onValueChange={(value) => setNewItem(prev => ({ ...prev, categoryId: value }))}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      {categories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Select
+                    value={newItem.locationId}
+                    onValueChange={(value) => setNewItem(prev => ({ ...prev, locationId: value }))}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select location" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      {locations.map(loc => (
+                        <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="picture">Picture</Label>
+                  <Input
+                    id="picture"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                  />
+                  {newItem.imageUrl && (
+                    <img src={newItem.imageUrl} alt="Preview" className="mt-2 h-32 w-32 object-cover rounded-md" />
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Create Item</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
