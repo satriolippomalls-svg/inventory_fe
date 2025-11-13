@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Package, Eye, EyeOff } from 'lucide-react';
 import { login } from '@/services/auth';
+import { setCurrentUser } from '@/lib/storage';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -26,6 +27,9 @@ const Login = () => {
       console.log("user", user);
 
       if (user && user.id) {
+        // Store user in localStorage so Layout can access it
+        setCurrentUser(user);
+        
         toast({
           title: 'Login successful',
           description: `Welcome back, ${user.username || user.name || 'User'}!`,
