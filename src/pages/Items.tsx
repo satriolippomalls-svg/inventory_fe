@@ -3,9 +3,9 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { getItems, getCategories, getLocations, saveItems } from '@/lib/storage';
+import { getItems, getCategories, getLocations, saveItems, saveCategories, saveLocations } from '@/lib/storage';
 import { Item, ItemCategory, Location } from '@/types';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +24,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 
 const Items = () => {
   const [items, setItems] = useState<Item[]>([]);
@@ -33,6 +43,10 @@ const Items = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ItemCategory | null>(null);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [newItem, setNewItem] = useState({
     name: '',
     code: '',
@@ -42,6 +56,8 @@ const Items = () => {
     locationId: '',
     imageUrl: '',
   });
+  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
+  const [newLocation, setNewLocation] = useState({ name: '', description: '' });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -108,19 +124,113 @@ const Items = () => {
     });
   };
 
+  const handleCategorySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (editingCategory) {
+      const updatedCategories = categories.map(cat =>
+        cat.id === editingCategory.id
+          ? { ...cat, name: newCategory.name, description: newCategory.description }
+          : cat
+      );
+      saveCategories(updatedCategories);
+      setCategories(updatedCategories);
+      toast({ title: 'Category updated', description: 'Category has been updated successfully' });
+    } else {
+      const category: ItemCategory = {
+        id: Date.now().toString(),
+        name: newCategory.name,
+        description: newCategory.description,
+      };
+      const updatedCategories = [...categories, category];
+      saveCategories(updatedCategories);
+      setCategories(updatedCategories);
+      toast({ title: 'Category created', description: 'New category has been added successfully' });
+    }
+    
+    setIsCategoryDialogOpen(false);
+    setEditingCategory(null);
+    setNewCategory({ name: '', description: '' });
+  };
+
+  const handleLocationSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (editingLocation) {
+      const updatedLocations = locations.map(loc =>
+        loc.id === editingLocation.id
+          ? { ...loc, name: newLocation.name, description: newLocation.description }
+          : loc
+      );
+      saveLocations(updatedLocations);
+      setLocations(updatedLocations);
+      toast({ title: 'Location updated', description: 'Location has been updated successfully' });
+    } else {
+      const location: Location = {
+        id: Date.now().toString(),
+        name: newLocation.name,
+        description: newLocation.description,
+      };
+      const updatedLocations = [...locations, location];
+      saveLocations(updatedLocations);
+      setLocations(updatedLocations);
+      toast({ title: 'Location created', description: 'New location has been added successfully' });
+    }
+    
+    setIsLocationDialogOpen(false);
+    setEditingLocation(null);
+    setNewLocation({ name: '', description: '' });
+  };
+
+  const handleEditCategory = (category: ItemCategory) => {
+    setEditingCategory(category);
+    setNewCategory({ name: category.name, description: category.description || '' });
+    setIsCategoryDialogOpen(true);
+  };
+
+  const handleDeleteCategory = (id: string) => {
+    const updatedCategories = categories.filter(cat => cat.id !== id);
+    saveCategories(updatedCategories);
+    setCategories(updatedCategories);
+    toast({ title: 'Category deleted', description: 'Category has been removed successfully' });
+  };
+
+  const handleEditLocation = (location: Location) => {
+    setEditingLocation(location);
+    setNewLocation({ name: location.name, description: location.description || '' });
+    setIsLocationDialogOpen(true);
+  };
+
+  const handleDeleteLocation = (id: string) => {
+    const updatedLocations = locations.filter(loc => loc.id !== id);
+    saveLocations(updatedLocations);
+    setLocations(updatedLocations);
+    toast({ title: 'Location deleted', description: 'Location has been removed successfully' });
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Items</h1>
-            <p className="text-muted-foreground">Manage your inventory items</p>
-          </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Item
-          </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Inventory Management</h1>
+          <p className="text-muted-foreground">Manage your items, categories, and locations</p>
         </div>
+
+        <Tabs defaultValue="items" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="items">Items</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="locations">Locations</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="items" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Items</h2>
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Item
+              </Button>
+            </div>
 
         <Card>
           <CardContent className="pt-6">
@@ -162,35 +272,135 @@ const Items = () => {
           </CardContent>
         </Card>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredItems.map(item => (
-            <Card key={item.id} className="hover-scale cursor-pointer">
-              <CardContent className="pt-6">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold">{item.name}</h3>
-                      <p className="text-sm text-muted-foreground">{item.code}</p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filteredItems.map(item => (
+                <Card key={item.id} className="hover-scale cursor-pointer">
+                  <CardContent className="pt-6">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-semibold">{item.name}</h3>
+                          <p className="text-sm text-muted-foreground">{item.code}</p>
+                        </div>
+                        <Badge variant={item.amount < item.minStock ? 'destructive' : 'default'}>
+                          {item.amount}
+                        </Badge>
+                      </div>
+                      <div className="text-sm space-y-1">
+                        <p><span className="text-muted-foreground">Category:</span> {getCategoryName(item.categoryId)}</p>
+                        <p><span className="text-muted-foreground">Location:</span> {getLocationName(item.locationId)}</p>
+                        <p><span className="text-muted-foreground">Min Stock:</span> {item.minStock}</p>
+                      </div>
+                      {item.amount < item.minStock && (
+                        <Badge variant="destructive" className="w-full justify-center">
+                          Low Stock Alert
+                        </Badge>
+                      )}
                     </div>
-                    <Badge variant={item.amount < item.minStock ? 'destructive' : 'default'}>
-                      {item.amount}
-                    </Badge>
-                  </div>
-                  <div className="text-sm space-y-1">
-                    <p><span className="text-muted-foreground">Category:</span> {getCategoryName(item.categoryId)}</p>
-                    <p><span className="text-muted-foreground">Location:</span> {getLocationName(item.locationId)}</p>
-                    <p><span className="text-muted-foreground">Min Stock:</span> {item.minStock}</p>
-                  </div>
-                  {item.amount < item.minStock && (
-                    <Badge variant="destructive" className="w-full justify-center">
-                      Low Stock Alert
-                    </Badge>
-                  )}
-                </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="categories" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Categories</h2>
+              <Button onClick={() => { setEditingCategory(null); setIsCategoryDialogOpen(true); }}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Category
+              </Button>
+            </div>
+            <Card>
+              <CardContent className="pt-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categories.map(category => (
+                      <TableRow key={category.id}>
+                        <TableCell className="font-medium">{category.name}</TableCell>
+                        <TableCell>{category.description || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditCategory(category)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteCategory(category.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="locations" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Locations</h2>
+              <Button onClick={() => { setEditingLocation(null); setIsLocationDialogOpen(true); }}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Location
+              </Button>
+            </div>
+            <Card>
+              <CardContent className="pt-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {locations.map(location => (
+                      <TableRow key={location.id}>
+                        <TableCell className="font-medium">{location.name}</TableCell>
+                        <TableCell>{location.description || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditLocation(location)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteLocation(location.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[500px]">
@@ -296,6 +506,78 @@ const Items = () => {
                   Cancel
                 </Button>
                 <Button type="submit">Create Item</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>{editingCategory ? 'Edit Category' : 'Add New Category'}</DialogTitle>
+              <DialogDescription>
+                {editingCategory ? 'Update category details' : 'Create a new item category'}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCategorySubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="categoryName">Name</Label>
+                  <Input
+                    id="categoryName"
+                    value={newCategory.name}
+                    onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="categoryDescription">Description</Label>
+                  <Textarea
+                    id="categoryDescription"
+                    value={newCategory.description}
+                    onChange={(e) => setNewCategory(prev => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit">{editingCategory ? 'Update' : 'Create'}</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>{editingLocation ? 'Edit Location' : 'Add New Location'}</DialogTitle>
+              <DialogDescription>
+                {editingLocation ? 'Update location details' : 'Create a new storage location'}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleLocationSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="locationName">Name</Label>
+                  <Input
+                    id="locationName"
+                    value={newLocation.name}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, name: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="locationDescription">Description</Label>
+                  <Textarea
+                    id="locationDescription"
+                    value={newLocation.description}
+                    onChange={(e) => setNewLocation(prev => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit">{editingLocation ? 'Update' : 'Create'}</Button>
               </DialogFooter>
             </form>
           </DialogContent>
