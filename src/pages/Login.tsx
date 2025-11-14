@@ -6,8 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Package, Eye, EyeOff } from 'lucide-react';
-import { login } from '@/services/auth';
-import { setCurrentUser } from '@/lib/storage';
+import { login as storageLogin, setCurrentUser } from '@/lib/storage';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -22,7 +21,7 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const user = await login(email, password);
+      const user = storageLogin(email, password);
       
       console.log("user", user);
 
@@ -32,7 +31,7 @@ const Login = () => {
         
         toast({
           title: 'Login successful',
-          description: `Welcome back, ${user.username || user.name || 'User'}!`,
+          description: `Welcome back, ${user.name || 'User'}!`,
         });
         navigate('/dashboard');
       } else {
