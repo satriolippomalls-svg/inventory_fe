@@ -6,8 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Package, Eye, EyeOff } from 'lucide-react';
-import { login } from '@/services/auth';
-import { setCurrentUser } from '@/lib/storage';
+import { login as storageLogin, setCurrentUser } from '@/lib/storage';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -21,37 +20,28 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     
-    try {
-      const user = await login(email, password);
-      
-      console.log("user", user);
+    const user = storageLogin(email, password);
+    
+    console.log("user", user);
 
-      if (user && user.id) {
-        // Store user in localStorage so Layout can access it
-        setCurrentUser(user);
-        
-        toast({
-          title: 'Login successful',
-          description: `Welcome back, ${user.name || 'User'}!`,
-        });
-        navigate('/dashboard');
-      } else {
-        toast({
-          title: 'Login failed',
-          description: 'Invalid email or password',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error("Login error:", error);
+    if (user && user.id) {
+      // Store user in localStorage so Layout can access it
+      setCurrentUser(user);
+      
+      toast({
+        title: 'Login successful',
+        description: `Welcome back, ${user.name || 'User'}!`,
+      });
+      navigate('/dashboard');
+    } else {
       toast({
         title: 'Login failed',
-        description: 'An error occurred during login',
+        description: 'Invalid email or password',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
+    
+    setIsLoading(false);
   };
 
   return (
