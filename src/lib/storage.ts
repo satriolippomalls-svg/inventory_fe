@@ -46,8 +46,14 @@ export const setCurrentUser = (user: User | null) => {
 export const login = (email: string, password: string): User | null => {
   const users = getUsers();
   const user = users.find(u => u.email === email);
-  // Mock password check (in real app, use proper auth)
-  if (user && password === 'password') {
+  
+  // Simple password mapping for demo
+  const validCredentials: Record<string, string> = {
+    'admin@inventory.com': 'admin123',
+    'user@inventory.com': 'user123'
+  };
+  
+  if (user && validCredentials[email] === password) {
     setCurrentUser(user);
     return user;
   }
