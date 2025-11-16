@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { getItems, getCategories, getLocations, saveItems, saveCategories, saveLocations } from '@/lib/storage';
 import { Item, ItemCategory, Location } from '@/types';
-import { Plus, Search, Filter, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash2, MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +34,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Items = () => {
   const [items, setItems] = useState<Item[]>([]);
@@ -45,6 +51,7 @@ const Items = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [editingCategory, setEditingCategory] = useState<ItemCategory | null>(null);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [newItem, setNewItem] = useState({
@@ -91,23 +98,47 @@ const Items = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const item: Item = {
-      id: Date.now().toString(),
-      name: newItem.name,
-      code: newItem.code,
-      amount: parseInt(newItem.amount),
-      minStock: parseInt(newItem.minStock),
-      categoryId: newItem.categoryId,
-      locationId: newItem.locationId,
-      imageUrl: newItem.imageUrl,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    if (editingItem) {
+      const updatedItems = items.map(item =>
+        item.id === editingItem.id
+          ? {
+              ...item,
+              name: newItem.name,
+              code: newItem.code,
+              amount: parseInt(newItem.amount),
+              minStock: parseInt(newItem.minStock),
+              categoryId: newItem.categoryId,
+              locationId: newItem.locationId,
+              imageUrl: newItem.imageUrl,
+              updatedAt: new Date().toISOString(),
+            }
+          : item
+      );
+      saveItems(updatedItems);
+      setItems(updatedItems);
+      toast({ title: 'Item updated', description: 'Item has been updated successfully' });
+    } else {
+      const item: Item = {
+        id: Date.now().toString(),
+        name: newItem.name,
+        code: newItem.code,
+        amount: parseInt(newItem.amount),
+        minStock: parseInt(newItem.minStock),
+        categoryId: newItem.categoryId,
+        locationId: newItem.locationId,
+        imageUrl: newItem.imageUrl,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-    const updatedItems = [...items, item];
-    saveItems(updatedItems);
-    setItems(updatedItems);
+      const updatedItems = [...items, item];
+      saveItems(updatedItems);
+      setItems(updatedItems);
+      toast({ title: 'Item created', description: 'New item has been added successfully' });
+    }
+    
     setIsDialogOpen(false);
+    setEditingItem(null);
     setNewItem({
       name: '',
       code: '',
@@ -116,11 +147,6 @@ const Items = () => {
       categoryId: '',
       locationId: '',
       imageUrl: '',
-    });
-
-    toast({
-      title: 'Item created',
-      description: 'New item has been added successfully',
     });
   };
 
@@ -208,6 +234,27 @@ const Items = () => {
     toast({ title: 'Location deleted', description: 'Location has been removed successfully' });
   };
 
+  const handleEditItem = (item: Item) => {
+    setEditingItem(item);
+    setNewItem({
+      name: item.name,
+      code: item.code,
+      amount: item.amount.toString(),
+      minStock: item.minStock.toString(),
+      categoryId: item.categoryId,
+      locationId: item.locationId,
+      imageUrl: item.imageUrl || '',
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDeleteItem = (id: string) => {
+    const updatedItems = items.filter(item => item.id !== id);
+    saveItems(updatedItems);
+    setItems(updatedItems);
+    toast({ title: 'Item deleted', description: 'Item has been removed successfully' });
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -226,7 +273,7 @@ const Items = () => {
           <TabsContent value="items" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Items</h2>
-              <Button onClick={() => setIsDialogOpen(true)}>
+              <Button onClick={() => { setEditingItem(null); setIsDialogOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Item
               </Button>
@@ -272,35 +319,69 @@ const Items = () => {
           </CardContent>
         </Card>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredItems.map(item => (
-                <Card key={item.id} className="hover-scale cursor-pointer">
-                  <CardContent className="pt-6">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold">{item.name}</h3>
-                          <p className="text-sm text-muted-foreground">{item.code}</p>
-                        </div>
-                        <Badge variant={item.amount < item.minStock ? 'destructive' : 'default'}>
-                          {item.amount}
-                        </Badge>
-                      </div>
-                      <div className="text-sm space-y-1">
-                        <p><span className="text-muted-foreground">Category:</span> {getCategoryName(item.categoryId)}</p>
-                        <p><span className="text-muted-foreground">Location:</span> {getLocationName(item.locationId)}</p>
-                        <p><span className="text-muted-foreground">Min Stock:</span> {item.minStock}</p>
-                      </div>
-                      {item.amount < item.minStock && (
-                        <Badge variant="destructive" className="w-full justify-center">
-                          Low Stock Alert
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <Card>
+              <CardContent className="pt-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead className="text-center">Amount</TableHead>
+                      <TableHead className="text-center">Min Stock</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredItems.map(item => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.code}</TableCell>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell>{getCategoryName(item.categoryId)}</TableCell>
+                        <TableCell>{getLocationName(item.locationId)}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={item.amount < item.minStock ? 'destructive' : 'default'}>
+                            {item.amount}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">{item.minStock}</TableCell>
+                        <TableCell className="text-center">
+                          {item.amount < item.minStock ? (
+                            <Badge variant="destructive">Low Stock</Badge>
+                          ) : (
+                            <Badge variant="secondary">In Stock</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-popover">
+                              <DropdownMenuItem onClick={() => handleEditItem(item)} className="cursor-pointer">
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteItem(item.id)}
+                                className="cursor-pointer text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="categories" className="space-y-4">
@@ -327,22 +408,26 @@ const Items = () => {
                         <TableCell className="font-medium">{category.name}</TableCell>
                         <TableCell>{category.description || '-'}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditCategory(category)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteCategory(category.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-popover">
+                              <DropdownMenuItem onClick={() => handleEditCategory(category)} className="cursor-pointer">
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteCategory(category.id)}
+                                className="cursor-pointer text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -376,22 +461,26 @@ const Items = () => {
                         <TableCell className="font-medium">{location.name}</TableCell>
                         <TableCell>{location.description || '-'}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditLocation(location)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteLocation(location.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-popover">
+                              <DropdownMenuItem onClick={() => handleEditLocation(location)} className="cursor-pointer">
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteLocation(location.id)}
+                                className="cursor-pointer text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -405,9 +494,9 @@ const Items = () => {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Add New Item</DialogTitle>
+              <DialogTitle>{editingItem ? 'Edit Item' : 'Add New Item'}</DialogTitle>
               <DialogDescription>
-                Fill in the details to create a new inventory item
+                {editingItem ? 'Update item details' : 'Fill in the details to create a new inventory item'}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
@@ -505,7 +594,7 @@ const Items = () => {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">Create Item</Button>
+                <Button type="submit">{editingItem ? 'Update Item' : 'Create Item'}</Button>
               </DialogFooter>
             </form>
           </DialogContent>
