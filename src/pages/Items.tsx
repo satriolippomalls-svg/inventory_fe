@@ -319,69 +319,71 @@ const Items = () => {
           </CardContent>
         </Card>
 
-            <Card>
-              <CardContent className="pt-6">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Code</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead className="text-center">Amount</TableHead>
-                      <TableHead className="text-center">Min Stock</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredItems.map(item => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.code}</TableCell>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell>{getCategoryName(item.categoryId)}</TableCell>
-                        <TableCell>{getLocationName(item.locationId)}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant={item.amount < item.minStock ? 'destructive' : 'default'}>
-                            {item.amount}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">{item.minStock}</TableCell>
-                        <TableCell className="text-center">
-                          {item.amount < item.minStock ? (
-                            <Badge variant="destructive">Low Stock</Badge>
-                          ) : (
-                            <Badge variant="secondary">In Stock</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-popover">
-                              <DropdownMenuItem onClick={() => handleEditItem(item)} className="cursor-pointer">
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleDeleteItem(item.id)}
-                                className="cursor-pointer text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredItems.map(item => (
+                <Card key={item.id} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg">{item.name}</h3>
+                        <p className="text-sm text-muted-foreground">Code: {item.code}</p>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-popover">
+                          <DropdownMenuItem onClick={() => handleEditItem(item)} className="cursor-pointer">
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteItem(item.id)}
+                            className="cursor-pointer text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    
+                    {item.imageUrl && (
+                      <div className="mb-4 rounded-md overflow-hidden bg-muted">
+                        <img src={item.imageUrl} alt={item.name} className="w-full h-48 object-cover" />
+                      </div>
+                    )}
+                    
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Category:</span>
+                        <Badge variant="outline">{getCategoryName(item.categoryId)}</Badge>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Location:</span>
+                        <Badge variant="outline">{getLocationName(item.locationId)}</Badge>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Stock:</span>
+                        <Badge variant={item.amount < item.minStock ? 'destructive' : 'default'}>
+                          {item.amount} / {item.minStock}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between text-sm pt-2">
+                        <span className="text-muted-foreground">Status:</span>
+                        {item.amount < item.minStock ? (
+                          <Badge variant="destructive">Low Stock</Badge>
+                        ) : (
+                          <Badge variant="secondary">In Stock</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </TabsContent>
 
           <TabsContent value="categories" className="space-y-4">
