@@ -3,9 +3,9 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { getItems, getCategories, getLocations, saveItems, saveCategories, saveLocations } from '@/lib/storage';
-import { Item, ItemCategory, Location } from '@/types';
-import { Plus, Search, Filter, Edit, Trash2, MoreVertical } from 'lucide-react';
+import { getItems, getCategories, getLocations, saveItems, saveCategories, saveLocations, getStockMovements, saveStockMovements, getCurrentUser } from '@/lib/storage';
+import { Item, ItemCategory, Location, StockMovement } from '@/types';
+import { Plus, Search, Filter, Edit, Trash2, MoreVertical, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -67,6 +67,11 @@ const Items = () => {
   const [deletingItem, setDeletingItem] = useState<Item | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<ItemCategory | null>(null);
   const [deletingLocation, setDeletingLocation] = useState<Location | null>(null);
+  
+  const [stockMovementItem, setStockMovementItem] = useState<Item | null>(null);
+  const [movementType, setMovementType] = useState<'in' | 'out'>('in');
+  const [movementQuantity, setMovementQuantity] = useState('');
+  const [movementNotes, setMovementNotes] = useState('');
   const [newItem, setNewItem] = useState({
     name: '',
     code: '',
@@ -289,6 +294,77 @@ const Items = () => {
     }
   };
 
+  const handleStockMovement = (item: Item) => {
+    setStockMovementItem(item);
+    setMovementType('in');
+    setMovementQuantity('');
+    setMovementNotes('');
+  };
+
+  const handleSubmitStockMovement = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stockMovementItem) return;
+
+    const quantity = parseInt(movementQuantity);
+    if (isNaN(quantity) || quantity <= 0) {
+      toast({
+        title: "Invalid quantity",
+        description: "Please enter a valid quantity greater than 0.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to perform stock movements.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update item amount
+    const newAmount = movementType === 'in' 
+      ? stockMovementItem.amount + quantity 
+      : stockMovementItem.amount - quantity;
+
+    if (newAmount < 0) {
+      toast({
+        title: "Insufficient stock",
+        description: "Cannot decrease stock below 0.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updatedItem = { ...stockMovementItem, amount: newAmount, updatedAt: new Date().toISOString() };
+    const updatedItems = items.map(i => i.id === updatedItem.id ? updatedItem : i);
+    saveItems(updatedItems);
+    setItems(updatedItems);
+
+    // Create stock movement record
+    const movement: StockMovement = {
+      id: Date.now().toString(),
+      itemId: stockMovementItem.id,
+      type: movementType,
+      quantity,
+      notes: movementNotes || undefined,
+      userId: currentUser.id,
+      createdAt: new Date().toISOString(),
+    };
+
+    const movements = getStockMovements();
+    saveStockMovements([...movements, movement]);
+
+    setStockMovementItem(null);
+    toast({
+      title: "Stock updated",
+      description: `Successfully ${movementType === 'in' ? 'added' : 'removed'} ${quantity} units.`,
+    });
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -369,6 +445,10 @@ const Items = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-popover">
+                          <DropdownMenuItem onClick={() => handleStockMovement(item)} className="cursor-pointer">
+                            <Package className="mr-2 h-4 w-4" />
+                            Stock Movement
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleEditItem(item)} className="cursor-pointer">
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
@@ -761,6 +841,61 @@ const Items = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Stock Movement Dialog */}
+        <Dialog open={!!stockMovementItem} onOpenChange={(open) => !open && setStockMovementItem(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Stock Movement - {stockMovementItem?.name}</DialogTitle>
+              <DialogDescription>
+                Current stock: {stockMovementItem?.amount} units
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmitStockMovement} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="movementType">Movement Type</Label>
+                <Select value={movementType} onValueChange={(value: 'in' | 'out') => setMovementType(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in">Stock In (+)</SelectItem>
+                    <SelectItem value="out">Stock Out (-)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="movementQuantity">Quantity</Label>
+                <Input
+                  id="movementQuantity"
+                  type="number"
+                  min="1"
+                  value={movementQuantity}
+                  onChange={(e) => setMovementQuantity(e.target.value)}
+                  placeholder="Enter quantity"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="movementNotes">Notes (Optional)</Label>
+                <Input
+                  id="movementNotes"
+                  value={movementNotes}
+                  onChange={(e) => setMovementNotes(e.target.value)}
+                  placeholder="Add notes about this movement"
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setStockMovementItem(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {movementType === 'in' ? 'Add Stock' : 'Remove Stock'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
