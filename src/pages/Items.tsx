@@ -18,6 +18,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -54,6 +64,9 @@ const Items = () => {
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [editingCategory, setEditingCategory] = useState<ItemCategory | null>(null);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+  const [deletingItem, setDeletingItem] = useState<Item | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<ItemCategory | null>(null);
+  const [deletingLocation, setDeletingLocation] = useState<Location | null>(null);
   const [newItem, setNewItem] = useState({
     name: '',
     code: '',
@@ -214,11 +227,18 @@ const Items = () => {
     setIsCategoryDialogOpen(true);
   };
 
-  const handleDeleteCategory = (id: string) => {
-    const updatedCategories = categories.filter(cat => cat.id !== id);
-    saveCategories(updatedCategories);
-    setCategories(updatedCategories);
-    toast({ title: 'Category deleted', description: 'Category has been removed successfully' });
+  const handleDeleteCategory = (category: ItemCategory) => {
+    setDeletingCategory(category);
+  };
+
+  const confirmDeleteCategory = () => {
+    if (deletingCategory) {
+      const updatedCategories = categories.filter(cat => cat.id !== deletingCategory.id);
+      saveCategories(updatedCategories);
+      setCategories(updatedCategories);
+      toast({ title: 'Category deleted', description: 'Category has been removed successfully' });
+      setDeletingCategory(null);
+    }
   };
 
   const handleEditLocation = (location: Location) => {
@@ -227,11 +247,18 @@ const Items = () => {
     setIsLocationDialogOpen(true);
   };
 
-  const handleDeleteLocation = (id: string) => {
-    const updatedLocations = locations.filter(loc => loc.id !== id);
-    saveLocations(updatedLocations);
-    setLocations(updatedLocations);
-    toast({ title: 'Location deleted', description: 'Location has been removed successfully' });
+  const handleDeleteLocation = (location: Location) => {
+    setDeletingLocation(location);
+  };
+
+  const confirmDeleteLocation = () => {
+    if (deletingLocation) {
+      const updatedLocations = locations.filter(loc => loc.id !== deletingLocation.id);
+      saveLocations(updatedLocations);
+      setLocations(updatedLocations);
+      toast({ title: 'Location deleted', description: 'Location has been removed successfully' });
+      setDeletingLocation(null);
+    }
   };
 
   const handleEditItem = (item: Item) => {
@@ -248,11 +275,18 @@ const Items = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDeleteItem = (id: string) => {
-    const updatedItems = items.filter(item => item.id !== id);
-    saveItems(updatedItems);
-    setItems(updatedItems);
-    toast({ title: 'Item deleted', description: 'Item has been removed successfully' });
+  const handleDeleteItem = (item: Item) => {
+    setDeletingItem(item);
+  };
+
+  const confirmDeleteItem = () => {
+    if (deletingItem) {
+      const updatedItems = items.filter(item => item.id !== deletingItem.id);
+      saveItems(updatedItems);
+      setItems(updatedItems);
+      toast({ title: 'Item deleted', description: 'Item has been removed successfully' });
+      setDeletingItem(null);
+    }
   };
 
   return (
@@ -340,7 +374,7 @@ const Items = () => {
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => handleDeleteItem(item.id)}
+                            onClick={() => handleDeleteItem(item)}
                             className="cursor-pointer text-destructive focus:text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -422,7 +456,7 @@ const Items = () => {
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem 
-                                onClick={() => handleDeleteCategory(category.id)}
+                                onClick={() => handleDeleteCategory(category)}
                                 className="cursor-pointer text-destructive focus:text-destructive"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -475,7 +509,7 @@ const Items = () => {
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem 
-                                onClick={() => handleDeleteLocation(location.id)}
+                                onClick={() => handleDeleteLocation(location)}
                                 className="cursor-pointer text-destructive focus:text-destructive"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -673,6 +707,60 @@ const Items = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Item Confirmation */}
+        <AlertDialog open={!!deletingItem} onOpenChange={(open) => !open && setDeletingItem(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete "{deletingItem?.name}". This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteItem} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Category Confirmation */}
+        <AlertDialog open={!!deletingCategory} onOpenChange={(open) => !open && setDeletingCategory(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the category "{deletingCategory?.name}". This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteCategory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Location Confirmation */}
+        <AlertDialog open={!!deletingLocation} onOpenChange={(open) => !open && setDeletingLocation(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the location "{deletingLocation?.name}". This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteLocation} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );
